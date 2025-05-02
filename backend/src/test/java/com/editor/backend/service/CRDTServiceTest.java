@@ -132,4 +132,52 @@ public class CRDTServiceTest {
 
         assertEquals("CAB", crdt.getDocument()); // C(2), then A/B resolved by userId: A < B
     }
+    @Test
+void testPasteMultipleCharacters() {
+    crdt.insert('A', "root", "u1", 1);
+    crdt.insert('B', "u1:1", "u1", 2);
+    crdt.updateCursor("u1", "u1:2");
+
+    crdt.paste("XYZ", "u1", 3);
+
+    assertEquals("ABXYZ", crdt.getDocument());
+    assertEquals("u1:5", crdt.getCursor("u1").getNodeId());
+}
+
+@Test
+void testCopyRangeValid() {
+    crdt.insert('A', "root", "u1", 1);
+    crdt.insert('B', "u1:1", "u1", 2);
+    crdt.insert('C', "u1:2", "u1", 3);
+
+    String copied = crdt.copy("u1:1", "u1:3");
+    assertEquals("ABC", copied);
+}
+
+@Test
+void testCopyRangePartial() {
+    crdt.insert('A', "root", "u1", 1);
+    crdt.insert('B', "u1:1", "u1", 2);
+    crdt.insert('C', "u1:2", "u1", 3);
+    crdt.delete("u1:2");
+
+    String copied = crdt.copy("u1:1", "u1:3");
+    assertEquals("AC", copied); // B is tombstoned, excluded
+}
+
+@Test
+void testPasteAndUndo() {
+    crdt.insert('A', "root", "u1", 1);
+    crdt.updateCursor("u1", "u1:1");
+    crdt.paste("MN", "u1", 2); // M = u1:2, N = u1:3
+
+    assertEquals("AMN", crdt.getDocument());
+
+    crdt.undo("u1"); // removes N
+    crdt.undo("u1"); // removes M
+
+    assertEquals("A", crdt.getDocument());
+}
+
+
 }

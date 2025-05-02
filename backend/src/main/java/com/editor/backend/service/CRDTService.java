@@ -160,4 +160,35 @@ public class CRDTService {
             return cmp != 0 ? cmp : n1.getUserId().compareTo(n2.getUserId());   // ascending
         });
     }
+    public void paste(String text, String userId, long startingClock) {
+        String parentId = userCursors.containsKey(userId)
+        ? userCursors.get(userId).getNodeId()
+        : ROOT_ID;    
+        for (char c : text.toCharArray()) {
+            insert(c, parentId, userId, startingClock++);
+            parentId = userId + ":" + (startingClock - 1);  // new parent is the last inserted node
+        }
+        String newCursorId = userId + ":" + (startingClock - 1);
+        updateCursor(userId, newCursorId);
+    }
+    public String copy(String startNodeId, String endNodeId) {
+        List<String> ordered = new ArrayList<>();
+        dfsCollectIds(ROOT_ID, ordered);
+    
+        int start = ordered.indexOf(startNodeId);
+        int end = ordered.indexOf(endNodeId);
+    
+        if (start == -1 || end == -1 || start > end) return "";
+    
+        StringBuilder sb = new StringBuilder();
+        for (int i = start; i <= end; i++) {
+            CRDTNode node = nodeMap.get(ordered.get(i));
+            if (node != null && !node.isDeleted()) {
+                sb.append(node.getValue());
+            }
+        }
+        return sb.toString();
+    }
+    
+
 }
