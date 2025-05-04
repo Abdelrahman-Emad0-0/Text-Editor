@@ -45,22 +45,24 @@ public class DocumentRestController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/upload/")
-    public ResponseEntity<Map<String, String>> importFile (@RequestParam("file") MultipartFile file, @RequestBody Map<String, String> body) {
+    @PostMapping(path = "/upload/", consumes = "multipart/form-data")
+    public ResponseEntity<Map<String, String>> importFile(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("userId") String userId) {
         // TODO: Upload File Into A CRDT
 
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("file is missing or empty");
         }
 
-        if (!file.getContentType().equals("text/plain")) {
-            throw new IllegalArgumentException("File Type is not text");
-        }
+        // if (!file.getContentType().equals("text/plain")) {
+        // throw new IllegalArgumentException("File Type is not text");
+        // }
 
         String fileContent;
         try {
             fileContent = new String(file.getBytes());
-        } catch(Exception e) {
+        } catch (Exception e) {
             throw new RuntimeException("Error Reading File");
         }
 
@@ -70,7 +72,7 @@ public class DocumentRestController {
 
         for (char c : fileContent.toCharArray()) {
             // Still need the parentID
-            // docCRDT.insert(c, , body.get("userId"),  System.currentTimeMillis());
+            // docCRDT.insert(c, , body.get("userId"), System.currentTimeMillis());
         }
 
         documentSessions.put(session.getDocId(), session);
