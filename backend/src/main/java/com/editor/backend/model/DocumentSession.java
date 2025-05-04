@@ -1,12 +1,15 @@
 package com.editor.backend.model;
 import java.util.UUID;
 import com.editor.backend.service.CRDTService;
+import java.util.List;
+
 
 public class DocumentSession {
     private String documentId;
     private String editorCode;
     private String viewerCode;
     private CRDTService docCRDT;
+    private List<User> docUsers;
 
     public DocumentSession () {
         this.documentId = UUID.randomUUID().toString();
@@ -15,19 +18,28 @@ public class DocumentSession {
         this.docCRDT = new CRDTService();
     }
 
-    boolean isEditor(String code) {
+    public boolean isEditor(String code) {
         return code.equals(this.editorCode);
     }
 
-    boolean isViewer(String code) {
+    public boolean isViewer(String code) {
         return code.equals(this.viewerCode);
     }
 
-    String getViewerCode() {
+    public String getViewerCode() {
         return this.viewerCode;
     }
 
-    String getEditorCode() {
+    public String getEditorCode() {
         return this.editorCode;
+    }
+
+    public String getDocId() {
+        return this.documentId;
+    }
+
+    //* Maybe Change Later
+    public CRDTService getDocCRDT() {
+        return this.docCRDT;
     }
 }
