@@ -1,4 +1,4 @@
-package com.editor.backend.service;
+package com.editor.backend.controller;
 
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
