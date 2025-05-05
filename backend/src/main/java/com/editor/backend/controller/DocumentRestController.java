@@ -35,6 +35,7 @@ public class DocumentRestController {
         return ResponseEntity.status(500).body(error);
     }
 
+    //! USED
     @PostMapping("")
     public ResponseEntity<Map<String, String>> createNewDocument() {
         DocumentSession session = new DocumentSession();
@@ -50,6 +51,7 @@ public class DocumentRestController {
         return ResponseEntity.ok(response);
     }
 
+    //! USED
     @PostMapping(path = "/upload", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, String>> importFile(@RequestBody Map<String, String> payload) {
         System.out.println("[Server] : Start uploading file");
@@ -79,6 +81,12 @@ public class DocumentRestController {
 
         System.out.println("[Server] : Uploaded Document Successfully");
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/userJoin/{code}")
+    public ResponseEntity<?> undo(@PathVariable String code) {
+        Map<String, String> result = documentSessions.getSessionCode(code);
+        return ResponseEntity.ok(result);
     }
 
 

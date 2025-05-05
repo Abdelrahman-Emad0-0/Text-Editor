@@ -20,6 +20,24 @@ public class DocumentSessionService {
         documentSessions.put(documentId, documentSession);
     }
 
+    public Map<String, String> getSessionCode(String code) {
+        Map<String, String> result = new HashMap<>();
+        for (DocumentSession session : documentSessions.values()) {
+            if (session.getEditorCode().equals(code)) {
+                result.put("documentId", session.getDocId());
+                result.put("role", "editor");
+                return result;
+            } else if (session.getViewerCode().equals(code)) {
+                result.put("documentId", session.getDocId());
+                result.put("role", "viewer");
+                return result;
+            }
+        }
+        result.put("documentId", "none");
+        result.put("role", "none");
+        return result;
+    }
+
     public void removeDocumentSession(String documentId) {
         documentSessions.remove(documentId);
     }

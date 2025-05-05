@@ -14,8 +14,8 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-
 import org.json.JSONObject;
+
 
 public class HomePage {
     private VBox root;
@@ -128,10 +128,32 @@ public class HomePage {
         Button joinBtn = new Button("Join");
         joinBtn.setOnAction(e -> {
             // For demo, assume code determines role
-            String enteredCode = codeField.getText();
-            System.out.println("User entered code: " + enteredCode);
-            boolean isEditor = codeField.getText().startsWith("E");
-            mainApp.showDocPage(isEditor, "Code-Temp", generateShareCode(), generateShareCode());
+            try {
+                String enteredCode = codeField.getText();
+
+                HttpClient client = HttpClient.newHttpClient();
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create("http://localhost:8081/api/documents/userJoin/" + enteredCode))
+                        .POST(HttpRequest.BodyPublishers.noBody())
+                        .build();
+
+                HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+                System.out.println("User entered code: " + enteredCode);
+                System.out.println("Server response: " + response.body());
+
+                JSONObject jsonResponse = new JSONObject(response.body());
+                String role = jsonResponse.getString("role");
+                String documentId = jsonResponse.getString("documentId");
+            if (role.equalsIgnoreCase("none")) {
+                System.out.println("Code Not Valid");
+            }
+            else
+            {
+                mainApp.showDocPage(role.equalsIgnoreCase("editor"), documentId, generateShareCode(), generateShareCode());
+            }
+            } catch (Exception ex) {
+                System.out.println("Error: " + ex.getMessage());
+            }
         });
         joinBox.getChildren().addAll(codeField, joinBtn);
         joinBox.setAlignment(Pos.CENTER);
