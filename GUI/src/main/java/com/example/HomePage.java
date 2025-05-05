@@ -8,6 +8,14 @@ import javafx.stage.FileChooser;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+
+import org.json.JSONObject;
 
 public class HomePage {
     private VBox root;
@@ -24,36 +32,92 @@ public class HomePage {
 
         Button createBtn = new Button("Create New Document");
         createBtn.setOnAction(e -> {
-            // Generate random share codes for demonstration
-            mainApp.showDocPage(true, generateShareCode(), generateShareCode());
-        });
+            try {
+                // Create an HttpClient
+                HttpClient client = HttpClient.newHttpClient();
 
+                // Create a request
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create("http://localhost:8081/api/documents"))
+                        .header("Accept", "application/json")
+                        .POST(HttpRequest.BodyPublishers.noBody()) // Use noBody for a POST without body
+                        .build();
+
+                // Send the request and get the response
+                HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+                // Check response status code
+                int statusCode = response.statusCode();
+                if (statusCode >= 200 && statusCode < 300) {
+                    // Correctly extract the body from the response
+                    String responseBody = response.body();
+                    JSONObject jsonResponse = new JSONObject(responseBody); // Parse the body content
+
+                    // Use the extracted values from the JSON response
+                    mainApp.showDocPage(true, jsonResponse.getString("documentId"), jsonResponse.getString("editorCode"), jsonResponse.getString("viewerCode"));
+                } else {
+                    System.out.println("Error: " + statusCode);
+                }
+
+            } catch (Exception ex) {
+                System.out.println("Error: " + ex.getMessage());
+            }
+        });
         Button importBtn = new Button("Import Document");
         importBtn.setOnAction(e -> {
             FileChooser fileChooser = new FileChooser();
             fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Text Files", "*.txt"));
-            
-            // Show the file chooser dialog
             File selectedFile = fileChooser.showOpenDialog(mainApp.getPrimaryStage());
 
-            // If a file is selected, process it
             if (selectedFile != null) {
                 try {
-                    // Read the content of the file using the Main class's readFile method
-                    String fileContent = mainApp.readFile(selectedFile);
-                    
-                    // Navigate to the DocPage after importing the file
-                    mainApp.showDocPage(true, generateShareCode(), generateShareCode());
-                    
-                    // After navigating to DocPage, set the content in the TextArea
-                    DocPage docPage = mainApp.getDocPage(); // Get the current DocPage
-                    docPage.setTextAreaContent(fileContent); // Set the file content in the editor
+                    // Read file content as UTF-8 string
+                    String fileContent = Files.readString(selectedFile.toPath(), StandardCharsets.UTF_8);  // <-- updated helper method below
+
+                    // Prepare HTTP client
+                    HttpClient client = HttpClient.newHttpClient();
+
+                    // Prepare JSON payload
+                    JSONObject jsonRequest = new JSONObject();
+                    jsonRequest.put("fileContent", fileContent);
+
+                    HttpRequest request = HttpRequest.newBuilder()
+                            .uri(URI.create("http://localhost:8081/api/documents/upload"))
+                            .header("Accept", "application/json")
+                            .header("Content-Type", "application/json")
+                            .POST(HttpRequest.BodyPublishers.ofString(jsonRequest.toString()))
+                            .build();
+
+                    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+                    int statusCode = response.statusCode();
+                    if (statusCode >= 200 && statusCode < 300) {
+                        String responseBody = response.body();
+                        JSONObject jsonResponse = new JSONObject(responseBody);
+
+                        mainApp.showDocPage(true,
+                                jsonResponse.getString("documentId"),
+                                jsonResponse.getString("editorCode"),
+                                jsonResponse.getString("viewerCode"));
+
+                        DocPage docPage = mainApp.getDocPage();
+                        docPage.setTextAreaContent(fileContent);
+                    } else {
+                        Alert alert = new Alert(Alert.AlertType.ERROR, "Server error: " + statusCode);
+                        alert.setHeaderText(null);
+                        alert.showAndWait();
+                    }
 
                 } catch (IOException ex) {
-                    // Handle any errors while reading the file
                     Alert alert = new Alert(Alert.AlertType.ERROR, "Error reading file: " + ex.getMessage());
                     alert.setHeaderText(null);
                     alert.showAndWait();
+                } catch (InterruptedException ex) {
+                    Thread.currentThread().interrupt();
+                    System.out.println("Request interrupted: " + ex.getMessage());
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                    System.out.println("Unexpected error: " + ex.getMessage());
                 }
             }
         });
@@ -64,8 +128,10 @@ public class HomePage {
         Button joinBtn = new Button("Join");
         joinBtn.setOnAction(e -> {
             // For demo, assume code determines role
+            String enteredCode = codeField.getText();
+            System.out.println("User entered code: " + enteredCode);
             boolean isEditor = codeField.getText().startsWith("E");
-            mainApp.showDocPage(isEditor, generateShareCode(), generateShareCode());
+            mainApp.showDocPage(isEditor, "Code-Temp", generateShareCode(), generateShareCode());
         });
         joinBox.getChildren().addAll(codeField, joinBtn);
         joinBox.setAlignment(Pos.CENTER);
