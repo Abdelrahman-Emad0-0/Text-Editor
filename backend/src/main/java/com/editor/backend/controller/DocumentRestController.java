@@ -6,6 +6,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -81,4 +83,56 @@ public class DocumentRestController {
 
         return ResponseEntity.ok(response);
     }
+    @GetMapping("/{documentId}")
+public ResponseEntity<Map<String, String>> getDocument(@PathVariable String documentId) {
+    DocumentSession session = documentSessions.get(documentId);
+    if (session == null) {
+        throw new IllegalArgumentException("Invalid documentId");
+    }
+
+    String content = session.getDocCRDT().getDocument();
+
+    Map<String, String> response = new HashMap<>();
+    response.put("document", content);
+
+    return ResponseEntity.ok(response);
+}
+@PostMapping("/{documentId}/undo")
+public ResponseEntity<?> undo(@PathVariable String documentId,
+                              @RequestParam("userId") String userId) {
+    DocumentSession session = documentSessions.get(documentId);
+    if (session == null) {
+        throw new IllegalArgumentException("Invalid documentId");
+    }
+
+    session.getDocCRDT().undo(userId);
+
+    return ResponseEntity.ok(Map.of("message", "Undo successful"));
+}
+@PostMapping("/{documentId}/redo")
+public ResponseEntity<?> redo(@PathVariable String documentId,
+                              @RequestParam("userId") String userId) {
+    DocumentSession session = documentSessions.get(documentId);
+    if (session == null) {
+        throw new IllegalArgumentException("Invalid documentId");
+    }
+
+    session.getDocCRDT().redo(userId);
+
+    return ResponseEntity.ok(Map.of("message", "Redo successful"));
+}
+@PostMapping("/{documentId}/cursor")
+public ResponseEntity<?> updateCursor(@PathVariable String documentId,
+                                      @RequestParam String userId,
+                                      @RequestParam int index) {
+    DocumentSession session = documentSessions.get(documentId);
+    if (session == null) {
+        throw new IllegalArgumentException("Invalid documentId");
+    }
+
+    session.getDocCRDT().updateCursorByIndex(userId, index);
+
+    return ResponseEntity.ok(Map.of("message", "Cursor updated"));
+}
+
 }
