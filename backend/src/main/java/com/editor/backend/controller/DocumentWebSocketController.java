@@ -14,6 +14,7 @@ import com.editor.backend.model.DocumentSession;
 import com.editor.backend.model.Operation;
 import com.editor.backend.model.User;
 import com.editor.backend.service.DocumentSessionService;
+import com.editor.backend.service.CRDTService;
 
 public class DocumentWebSocketController {
 

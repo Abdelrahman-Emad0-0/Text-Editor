@@ -6,10 +6,11 @@ import com.editor.backend.model.DocumentSession;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class DocumentSessionService {
-    private final Map<String, DocumentSession> documentSessions = new HashMap<>();
+    private final Map<String, DocumentSession> documentSessions = new ConcurrentHashMap<>();
 
     public DocumentSession getDocumentSession(String documentId) {
         return documentSessions.get(documentId);

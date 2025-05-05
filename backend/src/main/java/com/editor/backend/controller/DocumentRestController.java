@@ -1,27 +1,32 @@
 package com.editor.backend.controller;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.editor.backend.model.DocumentSession;
 import com.editor.backend.service.CRDTService;
+import com.editor.backend.service.DocumentSessionService;
 
 @RestController
 @RequestMapping("/api/documents")
 public class DocumentRestController {
 
-    private static final Map<String, DocumentSession> documentSessions = new ConcurrentHashMap<>();
+    private final DocumentSessionService documentSessions;
+
+    public DocumentRestController(DocumentSessionService documentSessionService) {
+        this.documentSessions = documentSessionService;
+    }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleException(Exception ex) {
@@ -33,74 +38,54 @@ public class DocumentRestController {
     @PostMapping("")
     public ResponseEntity<Map<String, String>> createNewDocument() {
         DocumentSession session = new DocumentSession();
-        documentSessions.put(session.getDocId(), session);
+        documentSessions.addDocumentSession(session.getDocId(), session);
 
         Map<String, String> response = new HashMap<>();
         response.put("documentId", session.getDocId());
         response.put("editorCode", session.getEditorCode());
         response.put("viewerCode", session.getViewerCode());
+        System.out.println(session.getEditorCode());
+        System.out.println(session.getViewerCode());
 
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping(path = "/upload/", consumes = "multipart/form-data")
-    public ResponseEntity<Map<String, String>> importFile(
-            @RequestParam("file") MultipartFile file,
-            @RequestParam("documentId") String documentId,
-            @RequestParam("userId") String userId) {
+    @PostMapping(path = "/upload", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, String>> importFile(@RequestBody Map<String, String> payload) {
+        System.out.println("[Server] : Start uploading file");
 
-        // TODO: Upload File Into A CRDT
-
-        if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException("file is missing or empty");
+        String fileContent = payload.get("fileContent");
+        if (fileContent == null || fileContent.trim().isEmpty()) {
+            throw new IllegalArgumentException("fileContent is missing or empty");
         }
 
-        // TODO: Optional file type validation
-        // if (!file.getContentType().equals("text/plain")) {
-        //     throw new IllegalArgumentException("File Type is not text");
-        // }
+        System.out.println("[Server] : File content decoded - " + fileContent);
 
-        DocumentSession session = documentSessions.get(documentId);
-        if (session == null) {
-            throw new IllegalArgumentException("Invalid documentId");
-        }
-
-        String fileContent;
-        try {
-            fileContent = new String(file.getBytes());
-        } catch (Exception e) {
-            throw new RuntimeException("Error Reading File");
-        }
-
+        // Proceed with CRDT session creation and other logic
+        DocumentSession session = new DocumentSession();
+        documentSessions.getDocumentSession(session.getDocId());
         CRDTService docCRDT = session.getDocCRDT();
-
+        System.out.println("[Server] : " + fileContent);
         for (char c : fileContent.toCharArray()) {
-            docCRDT.insertAtCursor(c, userId, System.currentTimeMillis());
+            System.out.println("[Server] : " + c);
+            docCRDT.insertAtCursor(c, "userId", System.currentTimeMillis());
         }
 
         Map<String, String> response = new HashMap<>();
         response.put("message", "uploaded successfully");
+        response.put("documentId", session.getDocId());
+        response.put("editorCode", session.getEditorCode());
+        response.put("viewerCode", session.getViewerCode());
 
+        System.out.println("[Server] : Uploaded Document Successfully");
         return ResponseEntity.ok(response);
     }
-    @GetMapping("/{documentId}")
-public ResponseEntity<Map<String, String>> getDocument(@PathVariable String documentId) {
-    DocumentSession session = documentSessions.get(documentId);
-    if (session == null) {
-        throw new IllegalArgumentException("Invalid documentId");
-    }
 
-    String content = session.getDocCRDT().getDocument();
 
-    Map<String, String> response = new HashMap<>();
-    response.put("document", content);
-
-    return ResponseEntity.ok(response);
-}
-@PostMapping("/{documentId}/undo")
+    @PostMapping("/{documentId}/undo")
 public ResponseEntity<?> undo(@PathVariable String documentId,
                               @RequestParam("userId") String userId) {
-    DocumentSession session = documentSessions.get(documentId);
+    DocumentSession session = documentSessions.getDocumentSession(documentId);
     if (session == null) {
         throw new IllegalArgumentException("Invalid documentId");
     }
@@ -112,7 +97,7 @@ public ResponseEntity<?> undo(@PathVariable String documentId,
 @PostMapping("/{documentId}/redo")
 public ResponseEntity<?> redo(@PathVariable String documentId,
                               @RequestParam("userId") String userId) {
-    DocumentSession session = documentSessions.get(documentId);
+    DocumentSession session = documentSessions.getDocumentSession(documentId);
     if (session == null) {
         throw new IllegalArgumentException("Invalid documentId");
     }
@@ -125,7 +110,7 @@ public ResponseEntity<?> redo(@PathVariable String documentId,
 public ResponseEntity<?> updateCursor(@PathVariable String documentId,
                                       @RequestParam String userId,
                                       @RequestParam int index) {
-    DocumentSession session = documentSessions.get(documentId);
+    DocumentSession session = documentSessions.getDocumentSession(documentId);
     if (session == null) {
         throw new IllegalArgumentException("Invalid documentId");
     }

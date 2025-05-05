@@ -1,7 +1,7 @@
 package com.editor.backend.model;
 
 public class Operation {
-    public enum Type { INSERT, DELETE }
+    public enum Type { INSERT, DELETE, UNDO, COMMENT, PASTE, REDO }
 
     private Type type;
     private String nodeId;
