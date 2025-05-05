@@ -8,8 +8,6 @@ import javafx.scene.input.ClipboardContent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
-import javafx.scene.text.Text;
-import javafx.scene.text.TextFlow;
 import javafx.stage.FileChooser;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -38,6 +36,7 @@ public class DocPage {
     private Popup commentPopup = new Popup();
     private final List<Comment> comments = new ArrayList<>();
     private VBox commentDisplayBox = new VBox(10); // New comment display panel
+    private VBox activeUsersBox = new VBox(10); // Active users section
 
     public DocPage(Main mainApp, boolean isEditor, String editorCode, String viewerCode) {
         this.mainApp = mainApp;
@@ -58,6 +57,7 @@ public class DocPage {
         VBox editorArea = createEditorArea();
         setupCommentButton();
 
+        // Setting up comment display panel
         commentDisplayBox.setPadding(new Insets(10));
         commentDisplayBox.setStyle("-fx-background-color: #f9f9f9; -fx-border-color: lightgray;");
         commentDisplayBox.setPrefWidth(250);
@@ -65,7 +65,16 @@ public class DocPage {
         commentHeader.setFont(Font.font("Arial", 16));
         commentDisplayBox.getChildren().add(commentHeader);
 
-        contentArea.getChildren().addAll(editorArea, commentDisplayBox);
+        // Setting up active users panel
+        activeUsersBox.setPadding(new Insets(10));
+        activeUsersBox.setStyle("-fx-background-color: #f9f9f9; -fx-border-color: lightgray;");
+        activeUsersBox.setPrefWidth(250);
+        Label usersHeader = new Label("Active Users");
+        usersHeader.setFont(Font.font("Arial", 16));
+        activeUsersBox.getChildren().add(usersHeader);
+
+        // Add both sections to contentArea
+        contentArea.getChildren().addAll(editorArea, commentDisplayBox, activeUsersBox);
         HBox.setHgrow(editorArea, Priority.ALWAYS);
 
         root.setCenter(contentArea);
@@ -133,6 +142,7 @@ public class DocPage {
         editorBox.setAlignment(Pos.CENTER_LEFT);
         HBox.setHgrow(textArea, Priority.ALWAYS);
 
+        // Synchronize heights of textArea and comment/active users sections
         editorBox.prefHeightProperty().bind(centerBox.heightProperty().multiply(0.9));
         lineNumbers.prefHeightProperty().bind(editorBox.heightProperty());
         textArea.prefHeightProperty().bind(editorBox.heightProperty());
@@ -344,20 +354,21 @@ public class DocPage {
             });
     
             VBox commentBox = new VBox(5, ta, deleteBtn);
-            commentBox.setPadding(new Insets(5));
-            commentBox.setStyle("-fx-background-color: #ffffff; -fx-border-color: #dcdcdc; -fx-border-radius: 4;");
-            
             commentDisplayBox.getChildren().add(commentBox);
         }
     }
-    
-    // Helper method to map character index to line number
+
     private int getLineNumberFromPosition(int position) {
-        String text = textArea.getText();
-        int line = 1;
-        for (int i = 0; i < position && i < text.length(); i++) {
-            if (text.charAt(i) == '\n') line++;
+        String[] lines = textArea.getText().split("\n", -1);
+        int charCount = 0;
+        int lineNumber = 1;
+        for (String line : lines) {
+            charCount += line.length() + 1;
+            if (position < charCount) {
+                break;
+            }
+            lineNumber++;
         }
-        return line;
+        return lineNumber;
     }
 }
