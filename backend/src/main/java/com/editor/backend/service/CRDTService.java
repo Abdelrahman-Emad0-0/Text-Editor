@@ -1,10 +1,6 @@
 package com.editor.backend.service;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Stack;
+import java.util.*;
 
 import org.springframework.stereotype.Service;
 
@@ -29,6 +25,28 @@ public class CRDTService {
 
     public void addComment(Comment comment) {
         commentMap.put(comment.getId(), comment);
+    }
+
+    public void addCommentFromIndexRange(String userId, String content, int startIndex, int endIndex) {
+        String startNodeId = getNodeIdByIndex(startIndex);
+        String endNodeId = getNodeIdByIndex(endIndex);
+        String selectedText = getTextBetweenIndices(startIndex, endIndex);
+
+        if (startNodeId == null || endNodeId == null) return;
+
+        Comment comment = new Comment(
+                UUID.randomUUID().toString(),
+                userId,
+                content,
+                startNodeId,
+                endNodeId,
+                System.currentTimeMillis(),
+                startIndex,
+                endIndex,
+                selectedText
+        );
+
+        addComment(comment);
     }
 
     public List<Comment> getAllComments() {
@@ -163,20 +181,23 @@ public class CRDTService {
         }
     }
 
-    private void dfsCollectIds(String nodeId, List<String> ids) {
-        dfsCollectIds(nodeId, ids, false);
-    }
 
-    private void dfsCollectIds(String nodeId, List<String> ids, boolean includeDeleted) {
+    private void dfsCollectIds(String nodeId, List<String> ids, boolean includeDeleted, Set<String> visited) {
+        if (visited.contains(nodeId)) return; // avoid cycles
+        visited.add(nodeId);
+
         CRDTNode node = nodeMap.get(nodeId);
-
         if (!nodeId.equals(ROOT_ID) && (includeDeleted || !node.isDeleted())) {
             ids.add(nodeId);
         }
 
         for (String childId : node.getChildren()) {
-            dfsCollectIds(childId, ids, includeDeleted);
+            dfsCollectIds(childId, ids, includeDeleted, visited);
         }
+    }
+
+    private void dfsCollectIds(String nodeId, List<String> ids, boolean includeDeleted) {
+        dfsCollectIds(nodeId, ids, includeDeleted, new HashSet<>());
     }
 
     private void sortChildren(CRDTNode parent) {
@@ -221,16 +242,41 @@ public class CRDTService {
         }
         return sb.toString();
     }
+
     public void updateCursorByIndex(String userId, int index) {
         List<String> ordered = new ArrayList<>();
         dfsCollectIds(ROOT_ID, ordered, false); // only visible nodes
-    
+
         if (index < 0 || index >= ordered.size()) {
             updateCursor(userId, ROOT_ID); // fallback
             return;
         }
-    
+
         String nodeId = ordered.get(index);
         updateCursor(userId, nodeId);
+    }
+
+    public String getNodeIdByIndex(int index) {
+        List<String> ordered = new ArrayList<>();
+        dfsCollectIds(ROOT_ID, ordered, false);
+
+        if (index < 0 || index >= ordered.size()) return null;
+        return ordered.get(index);
+    }
+
+    public String getTextBetweenIndices(int startIndex, int endIndex) {
+        List<String> ordered = new ArrayList<>();
+        dfsCollectIds(ROOT_ID, ordered, false);
+
+        if (startIndex < 0 || endIndex >= ordered.size() || startIndex > endIndex) return "";
+
+        StringBuilder sb = new StringBuilder();
+        for (int i = startIndex; i <= endIndex; i++) {
+            CRDTNode node = nodeMap.get(ordered.get(i));
+            if (node != null && !node.isDeleted()) {
+                sb.append(node.getValue());
+            }
+        }
+        return sb.toString();
     }
 }
