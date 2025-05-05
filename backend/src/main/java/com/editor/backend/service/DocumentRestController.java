@@ -22,7 +22,11 @@ import com.editor.backend.model.DocumentSession;
 public class DocumentRestController {
 
     // Documnet Structure to Preserve Each Session
-    private static final Map<String, DocumentSession> documentSessions = new HashMap<>();
+    private final DocumentSessionService documentSessionService;
+
+    public DocumentRestController(DocumentSessionService documentSessionService) {
+        this.documentSessionService = documentSessionService;
+    }
 
     // Global Exception Handler
     @ExceptionHandler(Exception.class)
@@ -34,9 +38,10 @@ public class DocumentRestController {
 
     @PostMapping("")
     public ResponseEntity<Map<String, String>> createNewDocument() {
-        DocumentSession session = new DocumentSession();
-        documentSessions.put(session.getDocId(), session);
         // * Returns A new Json Response With DocId, editorCode, ViewerCode
+        // ! Needs UserId still
+        DocumentSession session = new DocumentSession();
+        this.documentSessionService.addDocumentSession(session.getDocId(), session);
         Map<String, String> response = new HashMap<>();
         response.put("documentId", session.getDocId());
         response.put("editorCode", session.getEditorCode());
@@ -71,11 +76,10 @@ public class DocumentRestController {
         CRDTService docCRDT = session.getDocCRDT();
 
         for (char c : fileContent.toCharArray()) {
-            // Still need the parentID
-            // docCRDT.insert(c, , body.get("userId"), System.currentTimeMillis());
+            docCRDT.insertAtCursor(c, userId, System.currentTimeMillis());
         }
 
-        documentSessions.put(session.getDocId(), session);
+        this.documentSessionService.addDocumentSession(session.getDocId(), session);
         response.put("message", "uploaded sucessfully");
         return ResponseEntity.ok(response);
     }
