@@ -20,8 +20,6 @@ import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.stage.Popup;
 
-import com.example.Comment;
-
 public class DocPage {
     private BorderPane root;
     private StackPane rootWrapper;
@@ -310,7 +308,7 @@ public class DocPage {
             cancelBtn.setOnAction(ev -> commentPopup.hide());
 
             saveBtn.setOnAction(ev -> {
-                String commentText = commentInput.getText().trim();
+                String commentText = commentInput.getText().trim(); //get selected text
                 if (!commentText.isEmpty()) {
                     Comment comment = new Comment(startIndex, endIndex, selectedText, commentText);
                     comments.add(comment);
