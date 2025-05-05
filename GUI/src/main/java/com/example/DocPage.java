@@ -13,8 +13,15 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URLEncoder;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+
 
 import javafx.application.Platform;
 import javafx.scene.Scene;
@@ -308,11 +315,9 @@ public class DocPage {
             cancelBtn.setOnAction(ev -> commentPopup.hide());
 
             saveBtn.setOnAction(ev -> {
-                String commentText = commentInput.getText().trim(); //get selected text
+                String commentText = commentInput.getText().trim();
                 if (!commentText.isEmpty()) {
-                    Comment comment = new Comment(startIndex, endIndex, selectedText, commentText);
-                    comments.add(comment);
-                    updateCommentDisplay();
+                    sendCommentToServer(startIndex, endIndex, selectedText, commentText);
                 }
                 commentPopup.hide();
             });
@@ -369,4 +374,111 @@ public class DocPage {
         }
         return lineNumber;
     }
+    private void sendCommentToServer(int startIndex, int endIndex, String selectedText, String commentText) {
+        String apiUrl = "http://localhost:8080/{documentId}/comment"; // Replace {documentId} dynamically
+        try {
+            HttpClient client = HttpClient.newHttpClient();
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(apiUrl))
+                    .POST(HttpRequest.BodyPublishers.ofString(
+                            String.format("userId=%s&content=%s&startIndex=%d&endIndex=%d",
+                                    "dynamicUserId", // Replace with userId from API
+                                    URLEncoder.encode(commentText, StandardCharsets.UTF_8),
+                                    startIndex, endIndex)))
+                    .header("Content-Type", "application/x-www-form-urlencoded")
+                    .build();
+
+            client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                    .thenAccept(response -> {
+                        if (response.statusCode() == 200) {
+                            Platform.runLater(() -> {
+                                Alert alert = new Alert(Alert.AlertType.INFORMATION, "Comment added successfully!");
+                                alert.setHeaderText(null);
+                                alert.showAndWait();
+                                fetchCommentsFromServer(); // Refresh comments
+                            });
+                        } else {
+                            Platform.runLater(() -> {
+                                Alert alert = new Alert(Alert.AlertType.ERROR, "Failed to add comment: " + response.body());
+                                alert.setHeaderText(null);
+                                alert.showAndWait();
+                            });
+                        }
+                    });
+        } catch (Exception ex) {
+            Alert alert = new Alert(Alert.AlertType.ERROR, "Error sending comment: " + ex.getMessage());
+            alert.setHeaderText(null);
+            alert.showAndWait();
+        }
+    }
+    private void fetchCommentsFromServer() {
+        String apiUrl = "http://localhost:8080/{documentId}/comments"; // Replace {documentId} dynamically
+        try {
+            HttpClient client = HttpClient.newHttpClient();
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(apiUrl))
+                    .GET()
+                    .build();
+
+            client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                    .thenAccept(response -> {
+                        if (response.statusCode() == 200) {
+                            Platform.runLater(() -> {
+                                List<Comment> fetchedComments = parseComments(response.body());
+                                comments.clear();
+                                comments.addAll(fetchedComments);
+                                updateCommentDisplay();
+                            });
+                        } else {
+                            Platform.runLater(() -> {
+                                Alert alert = new Alert(Alert.AlertType.ERROR, "Failed to fetch comments: " + response.body());
+                                alert.setHeaderText(null);
+                                alert.showAndWait();
+                            });
+                        }
+                    });
+        } catch (Exception ex) {
+            Alert alert = new Alert(Alert.AlertType.ERROR, "Error fetching comments: " + ex.getMessage());
+            alert.setHeaderText(null);
+            alert.showAndWait();
+        }
+    }
+    private List<Comment> parseComments(String response) {
+        List<Comment> commentList = new ArrayList<>();
+        try {
+            // Split the response into lines (each line represents a comment)
+            String[] lines = response.split("\n");
+
+            // Iterate through each line (skip the header if present)
+            for (String line : lines) {
+                // Skip empty lines
+                if (line.trim().isEmpty()) {
+                    continue;
+                }
+
+                // Split the line into fields using the delimiter (e.g., "|")
+                String[] fields = line.split("\\|");
+
+                // Ensure the line has the correct number of fields
+                if (fields.length == 4) {
+                    int startIndex = Integer.parseInt(fields[0].trim());
+                    int endIndex = Integer.parseInt(fields[1].trim());
+                    String selectedText = fields[2].trim();
+                    String content = fields[3].trim();
+
+                    // Create a new Comment object and add it to the list
+                    Comment comment = new Comment(startIndex, endIndex, selectedText, content);
+                    commentList.add(comment);
+                }
+            }
+        } catch (Exception e) {
+            // Handle parsing exceptions
+            e.printStackTrace();
+            Alert alert = new Alert(Alert.AlertType.ERROR, "Error parsing comments: " + e.getMessage());
+            alert.setHeaderText(null);
+            alert.showAndWait();
+        }
+        return commentList;
+    }
+
 }
