@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.editor.backend.model.Comment;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,6 +17,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.editor.backend.model.DocumentSession;
 import com.editor.backend.service.CRDTService;
+import org.springframework.web.bind.annotation.RequestBody;
+import java.util.UUID;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/documents")
@@ -135,4 +139,36 @@ public ResponseEntity<?> updateCursor(@PathVariable String documentId,
     return ResponseEntity.ok(Map.of("message", "Cursor updated"));
 }
 
+    @PostMapping("/{documentId}/comment")
+    public ResponseEntity<?> addComment(
+            @PathVariable String documentId,
+            @RequestParam String userId,
+            @RequestParam String content,
+            @RequestParam int startIndex,
+            @RequestParam int endIndex
+    ) {
+        DocumentSession session = documentSessions.get(documentId);
+        if (session == null) {
+            throw new IllegalArgumentException("Invalid documentId");
+        }
+
+        session.getDocCRDT().addCommentFromIndexRange(userId, content, startIndex, endIndex);
+
+        return ResponseEntity.ok(Map.of("message", "Comment added"));
+    }
+    @GetMapping("/{documentId}/comments")
+    public ResponseEntity<?> getAllComments(@PathVariable String documentId) {
+        DocumentSession session = documentSessions.get(documentId);
+        if (session == null) {
+            throw new IllegalArgumentException("Invalid documentId");
+        }
+
+        List<Comment> comments = session.getDocCRDT().getAllComments();
+        return ResponseEntity.ok(comments);
+    }
+    @GetMapping("/generateUserId")
+    public ResponseEntity<Map<String, String>> generateUserId() {
+        String userId = UUID.randomUUID().toString(); // or based on auth
+        return ResponseEntity.ok(Map.of("userId", userId));
+    }
 }
