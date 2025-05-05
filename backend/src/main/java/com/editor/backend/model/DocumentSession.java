@@ -42,4 +42,8 @@ public class DocumentSession {
     public CRDTService getDocCRDT() {
         return this.docCRDT;
     }
+
+    public void addToUsers(User newUser) {
+        this.docUsers.add(newUser);
+    }
 }

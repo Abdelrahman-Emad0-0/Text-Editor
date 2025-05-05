@@ -2,6 +2,7 @@ package com.editor.backend.controller;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -18,10 +19,8 @@ import com.editor.backend.service.CRDTService;
 @RequestMapping("/api/documents")
 public class DocumentRestController {
 
-    // Documnet Structure to Preserve Each Session
-    private static final Map<String, DocumentSession> documentSessions = new HashMap<>();
+    private static final Map<String, DocumentSession> documentSessions = new ConcurrentHashMap<>();
 
-    // Global Exception Handler
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleException(Exception ex) {
         Map<String, String> error = new HashMap<>();
@@ -33,7 +32,7 @@ public class DocumentRestController {
     public ResponseEntity<Map<String, String>> createNewDocument() {
         DocumentSession session = new DocumentSession();
         documentSessions.put(session.getDocId(), session);
-        // * Returns A new Json Response With DocId, editorCode, ViewerCode
+
         Map<String, String> response = new HashMap<>();
         response.put("documentId", session.getDocId());
         response.put("editorCode", session.getEditorCode());
@@ -45,16 +44,24 @@ public class DocumentRestController {
     @PostMapping(path = "/upload/", consumes = "multipart/form-data")
     public ResponseEntity<Map<String, String>> importFile(
             @RequestParam("file") MultipartFile file,
+            @RequestParam("documentId") String documentId,
             @RequestParam("userId") String userId) {
+
         // TODO: Upload File Into A CRDT
 
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("file is missing or empty");
         }
 
+        // TODO: Optional file type validation
         // if (!file.getContentType().equals("text/plain")) {
-        // throw new IllegalArgumentException("File Type is not text");
+        //     throw new IllegalArgumentException("File Type is not text");
         // }
+
+        DocumentSession session = documentSessions.get(documentId);
+        if (session == null) {
+            throw new IllegalArgumentException("Invalid documentId");
+        }
 
         String fileContent;
         try {
@@ -63,17 +70,15 @@ public class DocumentRestController {
             throw new RuntimeException("Error Reading File");
         }
 
-        Map<String, String> response = new HashMap<>();
-        DocumentSession session = new DocumentSession();
         CRDTService docCRDT = session.getDocCRDT();
 
         for (char c : fileContent.toCharArray()) {
-            // Still need the parentID
-            // docCRDT.insert(c, , body.get("userId"), System.currentTimeMillis());
+            docCRDT.insertAtCursor(c, userId, System.currentTimeMillis());
         }
 
-        documentSessions.put(session.getDocId(), session);
-        response.put("message", "uploaded sucessfully");
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "uploaded successfully");
+
         return ResponseEntity.ok(response);
     }
 }
