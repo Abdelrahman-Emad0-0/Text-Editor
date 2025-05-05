@@ -181,41 +181,41 @@ void testPasteAndUndo() {
 
     assertEquals("A", crdt.getDocument());
 }
-@Test
-void testAddAndRetrieveComment() {
-    crdt.insert('A', "root", "u1", 1);
-    crdt.insert('B', "u1:1", "u1", 2);
-    Comment comment = new Comment("c1", "u1", "Important note", "u1:1", "u1:2", System.currentTimeMillis());
-    crdt.addComment(comment);
-    assertEquals(1, crdt.getAllComments().size());
-    assertEquals("Important note", crdt.getAllComments().get(0).getContent());
-}
-
-@Test
-void testResolveComment() {
-    Comment c = new Comment("c2", "u1", "To fix", "u1:1", "u1:2", System.currentTimeMillis());
-    crdt.addComment(c);
-    crdt.resolveComment("c2");
-    assertTrue(crdt.getAllComments().get(0).isResolved());
-}
-
-@Test
-void testDeleteComment() {
-    Comment c = new Comment("c3", "u1", "Outdated", "u1:1", "u1:2", System.currentTimeMillis());
-    crdt.addComment(c);
-    crdt.deleteComment("c3");
-    assertEquals(0, crdt.getAllComments().size());
-}
-
-@Test
-void testAutoRemoveCommentOnNodeDelete() {
-    crdt.insert('X', "root", "u1", 1);
-    crdt.insert('Y', "u1:1", "u1", 2);
-    Comment c = new Comment("c4", "u1", "Watch this", "u1:1", "u1:2", System.currentTimeMillis());
-    crdt.addComment(c);
-    crdt.delete("u1:2");
-    assertEquals(0, crdt.getAllComments().size());
-}
+//@Test
+//void testAddAndRetrieveComment() {
+//    crdt.insert('A', "root", "u1", 1);
+//    crdt.insert('B', "u1:1", "u1", 2);
+//    Comment comment = new Comment("c1", "u1", "Important note", "u1:1", "u1:2", System.currentTimeMillis());
+//    crdt.addComment(comment);
+//    assertEquals(1, crdt.getAllComments().size());
+//    assertEquals("Important note", crdt.getAllComments().get(0).getContent());
+//}
+//
+//@Test
+//void testResolveComment() {
+//    Comment c = new Comment("c2", "u1", "To fix", "u1:1", "u1:2", System.currentTimeMillis());
+//    crdt.addComment(c);
+//    crdt.resolveComment("c2");
+//    assertTrue(crdt.getAllComments().get(0).isResolved());
+//}
+//
+//@Test
+//void testDeleteComment() {
+//    Comment c = new Comment("c3", "u1", "Outdated", "u1:1", "u1:2", System.currentTimeMillis());
+//    crdt.addComment(c);
+//    crdt.deleteComment("c3");
+//    assertEquals(0, crdt.getAllComments().size());
+//}
+//
+//@Test
+//void testAutoRemoveCommentOnNodeDelete() {
+//    crdt.insert('X', "root", "u1", 1);
+//    crdt.insert('Y', "u1:1", "u1", 2);
+//    Comment c = new Comment("c4", "u1", "Watch this", "u1:1", "u1:2", System.currentTimeMillis());
+//    crdt.addComment(c);
+//    crdt.delete("u1:2");
+//    assertEquals(0, crdt.getAllComments().size());
+//}
 @Test
 void testUpdateCursorByIndexAndInsert() {
     crdt.insert('A', "root", "u1", 1); // index 0

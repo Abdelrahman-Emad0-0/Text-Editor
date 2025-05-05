@@ -13,6 +13,7 @@ import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 import com.editor.backend.model.DocumentSession;
 import com.editor.backend.model.Operation;
 import com.editor.backend.model.User;
+import com.editor.backend.service.CRDTService;
 import com.editor.backend.service.DocumentSessionService;
 import com.editor.backend.service.CRDTService;
 
